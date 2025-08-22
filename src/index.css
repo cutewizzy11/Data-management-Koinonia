@@ -1,0 +1,285 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Data management for koinonia Design System - Professional HR Tool Aesthetic
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Clean professional background with header-inspired scheme */
+    --background: 0 0% 98%;
+    --foreground: 215 25% 27%;
+
+    /* Card system - Clean whites with subtle elevation */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+    --card-hover: 215 15% 99%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+
+    /* Primary - Professional dark blue from header */
+    --primary: 215 30% 18%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft neutral with header influence */
+    --secondary: 215 15% 95%;
+    --secondary-foreground: 215 25% 27%;
+
+    /* Muted tones - Enhanced with header colors */
+    --muted: 215 15% 95%;
+    --muted-foreground: 215 15% 60%;
+
+    /* Accent - Custom orange #ff6633 */
+    --accent: 15 100% 60%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 15 100% 55%;
+    --accent-light: 15 100% 95%;
+
+    /* Success - Vibrant green */
+    --success: 120 61% 50%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 120 61% 95%;
+
+    /* Interactive states */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-light: 0 84% 95%;
+
+    /* Borders and inputs - Enhanced with header theme */
+    --border: 215 15% 88%;
+    --border-light: 215 15% 92%;
+    --input: 215 15% 92%;
+    --ring: 15 100% 60%;
+
+    /* Design system tokens */
+    --radius: 0.75rem;
+    --shadow-soft: 0 4px 20px -2px hsl(215 25% 27% / 0.08);
+    --shadow-medium: 0 8px 30px -4px hsl(215 25% 27% / 0.12);
+    --shadow-strong: 0 16px 40px -8px hsl(215 25% 27% / 0.16);
+    --shadow-accent: 0 8px 30px -4px hsl(15 100% 60% / 0.15);
+
+    /* Gradients - Custom orange #ff6633 */
+    --gradient-accent: linear-gradient(135deg, hsl(15 100% 60%), hsl(25 95% 58%));
+    --gradient-accent-soft: linear-gradient(135deg, hsl(15 100% 95%), hsl(25 95% 92%));
+    --gradient-success: linear-gradient(135deg, hsl(120 61% 50%), hsl(140 65% 52%));
+    --gradient-primary: linear-gradient(135deg, hsl(215 30% 18%), hsl(215 35% 25%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(215 15% 98%));
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-quick: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+@layer components {
+  /* Professional card variants with header color scheme */
+  .card-interactive {
+    @apply bg-card border border-border rounded-lg p-6 shadow-soft transition-all duration-300 hover:shadow-medium hover:bg-card-hover cursor-pointer;
+  }
+  
+  .card-detail {
+    @apply bg-card border border-border rounded-lg p-6 shadow-medium;
+  }
+
+  .card-accent {
+    @apply bg-gradient-accent-soft border border-accent/20 rounded-lg p-6 shadow-soft;
+  }
+
+  .card-primary {
+    @apply bg-gradient-primary text-primary-foreground rounded-lg p-6 shadow-medium;
+  }
+
+  /* Button variants using header-inspired design system */
+  .btn-accent {
+    @apply bg-gradient-accent text-accent-foreground px-4 py-2 rounded-md font-medium transition-all duration-200 hover:shadow-accent hover:scale-105;
+  }
+  
+  .btn-accent:hover {
+    background: hsl(var(--accent-hover));
+  }
+  
+  .btn-success {
+    @apply bg-gradient-success text-success-foreground px-4 py-2 rounded-md font-medium transition-all duration-200 hover:shadow-medium hover:scale-105;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-primary text-primary-foreground px-4 py-2 rounded-md font-medium transition-all duration-200 hover:shadow-medium hover:scale-105;
+  }
+
+  .btn-outline-accent {
+    @apply border-2 border-accent text-accent bg-transparent px-4 py-2 rounded-md font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Avatar initials with header colors */
+  .avatar-circle {
+    @apply w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm;
+  }
+  
+  .avatar-lg {
+    @apply w-16 h-16 rounded-full flex items-center justify-center text-white font-semibold text-lg;
+  }
+
+  .avatar-accent {
+    @apply bg-gradient-accent;
+  }
+
+  .avatar-primary {
+    @apply bg-gradient-primary;
+  }
+
+  .avatar-success {
+    @apply bg-gradient-success;
+  }
+
+  /* Interactive elements with header theme */
+  .nav-item {
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-200 hover:bg-secondary/50 hover:text-accent;
+  }
+  
+  .nav-item-active {
+    @apply bg-accent text-accent-foreground shadow-accent;
+  }
+
+  /* Enhanced input styles */
+  .input-accent {
+    @apply bg-background border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all;
+  }
+
+  /* Status badges with header colors */
+  .badge-accent {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-accent-light text-accent;
+  }
+
+  .badge-success {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-light text-success;
+  }
+
+  .badge-destructive {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-destructive-light text-destructive;
+  }
+
+  /* Smooth transitions for layout changes */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-smooth;
+  }
+
+  /* Header-inspired hover effects */
+  .hover-accent {
+    @apply transition-all duration-200 hover:text-accent hover:scale-105;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-200 hover:shadow-medium hover:-translate-y-1;
+  }
+
+  /* Animation classes */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
