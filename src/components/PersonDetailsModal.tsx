@@ -42,81 +42,57 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
   const [submittedAssociates, setSubmittedAssociates] = useState<Person[]>([]);
   const [fetchingSubmissions, setFetchingSubmissions] = useState(false);
 
-  // Early return if modal is not open
   if (!isOpen) return null;
 
-  // Memoized display person to avoid unnecessary re-renders
   const displayPerson = useMemo(() => selectedPerson || person, [selectedPerson, person]);
 
-  // Fetch submitted referees and associates
+  // ---- UPDATED: match submitted forms by applicant name only (normalized) ----
   useEffect(() => {
     const fetchSubmittedForms = async () => {
-      if (person.role === 'Applicant') {
-        setFetchingSubmissions(true);
-        try {
-          const allData = await getAllData();
-          
-          // Filter referees who have submitted forms for this applicant
-          const applicantReferees = allData.referees.filter(referee => 
-            referee.applicantName === person.name && 
-            (referee.email === person.referee1Email || referee.email === person.referee2Email)
-          );
-          
-          // Filter associates who have submitted forms for this applicant
-          const applicantAssociates = allData.associates.filter(associate => 
-            associate.applicantName === person.name && 
-            (associate.email === person.associate1Email || associate.email === person.associate2Email)
-          );
-          
-          setSubmittedReferees(applicantReferees);
-          setSubmittedAssociates(applicantAssociates);
-        } catch (error) {
-          if (import.meta.env.DEV) {
-            console.error('[PersonDetailsModal] Error fetching submitted forms:', error);
-          }
-        } finally {
-          setFetchingSubmissions(false);
+      if (person.role !== 'Applicant') return;
+      setFetchingSubmissions(true);
+      try {
+        const allData = await getAllData();
+        const me = (s: string) => String(s || '').trim().toLowerCase();
+        const appName = me(person.name);
+
+        const applicantReferees = allData.referees.filter(r => me(r.applicantName) === appName);
+        const applicantAssociates = allData.associates.filter(a => me(a.applicantName) === appName);
+
+        setSubmittedReferees(applicantReferees);
+        setSubmittedAssociates(applicantAssociates);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('[PersonDetailsModal] Error fetching submitted forms:', error);
         }
+      } finally {
+        setFetchingSubmissions(false);
       }
     };
 
     fetchSubmittedForms();
   }, [person]);
 
-  // Scroll to top when modal opens or person changes
   useEffect(() => {
     if (isOpen) {
-      // Scroll the modal content to top
       const modalContent = document.querySelector('[data-modal-content]');
-      if (modalContent) {
-        modalContent.scrollTop = 0;
-      }
-      // Also scroll the page to top
+      if (modalContent) modalContent.scrollTop = 0;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isOpen, selectedPerson]);
 
-  // Function to handle going back to original person
-  const handleBackToOriginal = () => {
-    setSelectedPerson(null);
-  };
+  const handleBackToOriginal = () => setSelectedPerson(null);
 
-  // Utility function to format dates
   const formatDate = (dateString: string): string => {
     if (!dateString) return 'Not provided';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch {
       return dateString;
     }
   };
 
-  // Handler for viewing referee details
   const handleViewRefereeDetails = async (email: string): Promise<void> => {
     if (!email) return;
     setIsLoading(true);
@@ -131,15 +107,12 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
         }
       }
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('[PersonDetailsModal] Error fetching referee details:', error);
-      }
+      if (import.meta.env.DEV) console.error('[PersonDetailsModal] Error fetching referee details:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handler for viewing associate details
   const handleViewAssociateDetails = async (email: string): Promise<void> => {
     if (!email) return;
     setIsLoading(true);
@@ -154,20 +127,15 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
         }
       }
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('[PersonDetailsModal] Error fetching associate details:', error);
-      }
+      if (import.meta.env.DEV) console.error('[PersonDetailsModal] Error fetching associate details:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // InfoRow component for displaying person information
   const InfoRow: React.FC<InfoRowProps> = ({ icon: Icon, label, value }) => {
     if (!value || (typeof value === 'string' && value.trim() === '')) return null;
-    
     const displayValue = typeof value === 'string' ? value : String(value);
-    
     return (
       <div className="flex items-start space-x-3 py-3 px-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
         <Icon className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
@@ -179,7 +147,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
     );
   };
 
-  // SectionTitle component for section headers
   const SectionTitle: React.FC<SectionTitleProps> = ({ title, icon: Icon }) => (
     <div className="flex items-center space-x-2 mb-4 mt-6 first:mt-0">
       <Icon className="w-6 h-6 text-orange-600" />
@@ -187,7 +154,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
     </div>
   );
 
-  // Reference card component
   const ReferenceCard: React.FC<{
     title: string;
     name?: string;
@@ -195,22 +161,11 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
     colorScheme: 'blue' | 'green';
   }> = ({ title, name, email, colorScheme }) => {
     if (!name) return null;
-
     const colors = {
-      blue: {
-        bg: 'bg-orange-50',
-        border: 'border-orange-200',
-        title: 'text-orange-800'
-      },
-      green: {
-        bg: 'bg-green-50',
-        border: 'border-green-200',
-        title: 'text-green-800'
-      }
+      blue:  { bg: 'bg-orange-50', border: 'border-orange-200', title: 'text-orange-800' },
+      green: { bg: 'bg-green-50',  border: 'border-green-200',  title: 'text-green-800'  },
     };
-
     const scheme = colors[colorScheme];
-
     return (
       <div className={`${scheme.bg} p-4 rounded-lg border ${scheme.border} mt-2 first:mt-0`}>
         <div className="flex items-center justify-between mb-2">
@@ -222,15 +177,12 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
     );
   };
 
-  // Avatar component
   const Avatar: React.FC<{ person: Person }> = ({ person }) => {
-    // Ensure same-origin image path to prevent CORP/cross-origin errors
     const getImageUrl = (url?: string) => {
       if (!url) return url;
-      if (url.startsWith('/images/')) return url; // Already same-origin
+      if (url.startsWith('/images/')) return url;
       return url;
     };
-
     return (
       <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
         {person.image ? (
@@ -360,8 +312,18 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
                 <InfoRow icon={Shield} label="Criminal Record" value={displayPerson.criminalRecord} />
               </>
             )}
+
+            {/* Employment (NEW fields) */}
+            {displayPerson.role === 'Applicant' && (
+              <>
+                <SectionTitle title="Employment" icon={Building} />
+                <InfoRow icon={Building} label="Occupation" value={displayPerson.occupation} />
+                <InfoRow icon={Building} label="Former Employer" value={displayPerson.formerEmployer} />
+                <InfoRow icon={Building} label="Current Employer" value={displayPerson.currentEmployer} />
+                <InfoRow icon={FileText} label="Reason Left Former Employer" value={displayPerson.reasonLeftFormerEmployer} />
+              </>
+            )}
             
-            {/* Applicant Connection (for Referees and Associates) */}
             {(displayPerson.role === 'Referee' || displayPerson.role === 'Associate') && displayPerson.applicantName && (
               <>
                 <SectionTitle title="Applicant Connection" icon={UserCheck} />
@@ -369,7 +331,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
               </>
             )}
 
-            {/* Signature Section for Referees and Associates */}
             {(displayPerson.role === 'Referee' || displayPerson.role === 'Associate') && displayPerson.signature && (
               <>
                 <SectionTitle title="Signature" icon={FileText} />
@@ -378,15 +339,12 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
                     src={displayPerson.signature.startsWith('/images/') ? displayPerson.signature : displayPerson.signature} 
                     alt="Signature" 
                     className="max-w-xs h-auto border border-gray-300 rounded"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 </div>
               </>
             )}
 
-            {/* Submission Information for Referees and Associates */}
             {(displayPerson.role === 'Referee' || displayPerson.role === 'Associate') && displayPerson.timestamp && (
               <>
                 <SectionTitle title="Submission Information" icon={Clock} />
@@ -395,48 +353,24 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
               </>
             )}
 
-            {/* Only show these sections when viewing the original applicant (not referee/associate details) */}
             {!selectedPerson && (
               <>
-                {/* References (for Applicants) */}
                 {person.role === 'Applicant' && (person.referee1Name || person.referee2Name) && (
                   <>
                     <SectionTitle title="References" icon={UserCheck} />
-                    <ReferenceCard
-                      title="Referee 1"
-                      name={person.referee1Name}
-                      email={person.referee1Email}
-                      colorScheme="blue"
-                    />
-                    <ReferenceCard
-                      title="Referee 2"
-                      name={person.referee2Name}
-                      email={person.referee2Email}
-                      colorScheme="blue"
-                    />
+                    <ReferenceCard title="Referee 1" name={person.referee1Name} email={person.referee1Email} colorScheme="blue" />
+                    <ReferenceCard title="Referee 2" name={person.referee2Name} email={person.referee2Email} colorScheme="blue" />
                   </>
                 )}
 
-                {/* Associates (for Applicants) */}
                 {person.role === 'Applicant' && (person.associate1Name || person.associate2Name) && (
                   <>
                     <SectionTitle title="Associates" icon={Users} />
-                    <ReferenceCard
-                      title="Associate 1"
-                      name={person.associate1Name}
-                      email={person.associate1Email}
-                      colorScheme="green"
-                    />
-                    <ReferenceCard
-                      title="Associate 2"
-                      name={person.associate2Name}
-                      email={person.associate2Email}
-                      colorScheme="green"
-                    />
+                    <ReferenceCard title="Associate 1" name={person.associate1Name} email={person.associate1Email} colorScheme="green" />
+                    <ReferenceCard title="Associate 2" name={person.associate2Name} email={person.associate2Email} colorScheme="green" />
                   </>
                 )}
 
-                {/* Submitted Forms Section (for Applicants only) */}
                 {person.role === 'Applicant' && (
                   <>
                     <SectionTitle title="Submitted Forms Status" icon={CheckCircle} />
@@ -447,7 +381,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {/* Submitted Referees */}
                         <div>
                           <h4 className="font-semibold text-gray-800 mb-2">Referees Who Have Submitted</h4>
                           {submittedReferees.length > 0 ? (
@@ -486,7 +419,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
                           )}
                         </div>
 
-                        {/* Submitted Associates */}
                         <div>
                           <h4 className="font-semibold text-gray-800 mb-2">Associates Who Have Submitted</h4>
                           {submittedAssociates.length > 0 ? (
@@ -529,7 +461,6 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
                   </>
                 )}
 
-                {/* Submission Information for Applicants */}
                 {person.role === 'Applicant' && person.timestamp && (
                   <>
                     <SectionTitle title="Submission Information" icon={FileText} />

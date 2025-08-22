@@ -5,7 +5,6 @@ const VET_FEED_URL = import.meta.env.VITE_VET_FEED_URL || import.meta.env.REACT_
 
 /**
  * Send vetted applicant to Google Sheet (Apps Script Web App)
- * Expects the endpoint to accept JSON body and append to a sheet.
  */
 export async function sendToVettedSheet(applicant: Person, actor: string): Promise<{ ok: boolean; message?: string }> {
   if (!VET_WEBHOOK_URL) {
@@ -20,27 +19,34 @@ export async function sendToVettedSheet(applicant: Person, actor: string): Promi
       location: applicant.location,
       role: applicant.role || 'Applicant',
       timestamp: applicant.timestamp || new Date().toISOString(),
-      occupation: (applicant as any).occupation,
-      formerEmployer: (applicant as any).formerEmployer,
-      currentEmployer: (applicant as any).currentEmployer,
-      reasonForLeavingFormerEmployer: (applicant as any).reasonForLeavingFormerEmployer,
-      nin: (applicant as any).nin,
-      vnin: (applicant as any).vnin,
+
+      // employment
+      occupation: applicant.occupation,
+      formerEmployer: applicant.formerEmployer,
+      currentEmployer: applicant.currentEmployer,
+      reasonLeftFormerEmployer: applicant.reasonLeftFormerEmployer,
+
+      // nin
+      nin: applicant.nin || applicant.nationalIdentificationNumber,
+      vnin: applicant.vnin,
+
       vetted_by: actor,
       vetted_at: new Date().toISOString(),
       status: 'Vetted',
     };
+
     const resp = await fetch(VET_WEBHOOK_URL, {
       method: 'POST',
+      mode: 'cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (!resp.ok) {
-      const text = await resp.text();
+      const text = await resp.text().catch(() => '');
       return { ok: false, message: `Webhook responded ${resp.status}: ${text}` };
     }
     return { ok: true };
-  } catch (e:any) {
+  } catch (e: any) {
     return { ok: false, message: String(e?.message || e) };
   }
 }
@@ -50,10 +56,9 @@ export async function sendToVettedSheet(applicant: Person, actor: string): Promi
  */
 export async function fetchVettedBriefs(): Promise<Array<{ id: string; name: string; nin_status?: string; vetted_at?: string }>> {
   if (!VET_FEED_URL) return [];
-  const resp = await fetch(VET_FEED_URL);
+  const resp = await fetch(VET_FEED_URL, { method: 'GET', mode: 'cors' });
   if (!resp.ok) return [];
   const data = await resp.json().catch(()=>null);
-  // Expect either [{id,name,nin_status,vetted_at}, ...] or a sheet-like object
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.records)) return data.records;
   return [];
