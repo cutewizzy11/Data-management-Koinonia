@@ -1,65 +1,91 @@
+// src/services/vettingService.ts
 import { Person } from './apiService';
 
-const VET_WEBHOOK_URL = import.meta.env.VITE_VET_WEBHOOK_URL || import.meta.env.REACT_APP_VET_WEBHOOK_URL;
-const VET_FEED_URL = import.meta.env.VITE_VET_FEED_URL || import.meta.env.REACT_APP_VET_FEED_URL;
+const VET_WEBHOOK_URL =
+  import.meta.env.VITE_VET_WEBHOOK_URL || import.meta.env.REACT_APP_VET_WEBHOOK_URL;
+const VET_FEED_URL =
+  import.meta.env.VITE_VET_FEED_URL || import.meta.env.REACT_APP_VET_FEED_URL;
 
-/**
- * Send vetted applicant to Google Sheet (Apps Script Web App)
- */
-export async function sendToVettedSheet(applicant: Person, actor: string): Promise<{ ok: boolean; message?: string }> {
-  if (!VET_WEBHOOK_URL) {
-    return { ok: false, message: 'Missing VET_WEBHOOK_URL in env. Please set VITE_VET_WEBHOOK_URL.' };
-  }
-  try {
-    const payload = {
-      id: applicant.id,
-      name: applicant.name,
-      email: applicant.email,
-      phone: applicant.phone,
-      location: applicant.location,
-      role: applicant.role || 'Applicant',
-      timestamp: applicant.timestamp || new Date().toISOString(),
+type PostResult = { ok: boolean; message?: string };
 
-      // employment
-      occupation: applicant.occupation,
-      formerEmployer: applicant.formerEmployer,
-      currentEmployer: applicant.currentEmployer,
-      reasonLeftFormerEmployer: applicant.reasonLeftFormerEmployer,
+function buildPayload(applicant: Person, actor: string) {
+  return {
+    id: String(applicant.id),
+    name: applicant.name,
+    email: applicant.email,
+    phone: applicant.phone,
+    location: applicant.location,
+    role: applicant.role || 'Applicant',
+    timestamp: applicant.timestamp || new Date().toISOString(),
 
-      // nin
-      nin: applicant.nin || applicant.nationalIdentificationNumber,
-      vnin: applicant.vnin,
+    occupation: applicant.occupation,
+    formerEmployer: applicant.formerEmployer,
+    currentEmployer: applicant.currentEmployer,
+    reasonLeftFormerEmployer:
+      (applicant as any).reasonLeftFormerEmployer ||
+      (applicant as any).reasonForLeavingFormerEmployer,
+    reasonForLeavingFormerEmployer:
+      (applicant as any).reasonForLeavingFormerEmployer ||
+      (applicant as any).reasonLeftFormerEmployer,
 
-      vetted_by: actor,
-      vetted_at: new Date().toISOString(),
-      status: 'Vetted',
-    };
+    nin: applicant.nin || applicant.nationalIdentificationNumber,
+    vnin: applicant.vnin,
 
-    const resp = await fetch(VET_WEBHOOK_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      return { ok: false, message: `Webhook responded ${resp.status}: ${text}` };
-    }
-    return { ok: true };
-  } catch (e: any) {
-    return { ok: false, message: String(e?.message || e) };
-  }
+    vetted_by: actor,
+    vetted_at: new Date().toISOString(),
+    status: 'Vetted',
+  };
 }
 
-/**
- * Fetch vetted applicants brief list from Google Sheet feed (Apps Script doGet)
- */
-export async function fetchVettedBriefs(): Promise<Array<{ id: string; name: string; nin_status?: string; vetted_at?: string }>> {
+export async function sendToVettedSheet(applicant: Person, actor: string): Promise<PostResult> {
+  if (!VET_WEBHOOK_URL) {
+    return { ok: false, message: 'Missing VET_WEBHOOK_URL in .env (VITE_VET_WEBHOOK_URL).' };
+  }
+
+  const json = JSON.stringify(buildPayload(applicant, actor));
+  const body = `payload=${encodeURIComponent(json)}`;
+
+  const resp = await fetch(VET_WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body,
+  });
+
+  let parsed: any = null;
+  try { parsed = await resp.json(); } catch {
+    try { const txt = await resp.text(); parsed = txt ? { message: txt } : null; } catch {}
+  }
+
+  if (!resp.ok) {
+    const msg = (parsed && (parsed.error || parsed.message)) || `HTTP ${resp.status}`;
+    return { ok: false, message: msg };
+  }
+  if (parsed && parsed.ok === false) {
+    return { ok: false, message: parsed.error || 'Script reported failure' };
+  }
+  return { ok: true, message: (parsed && parsed.message) || 'Saved' };
+}
+
+export async function fetchVettedBriefs(): Promise<
+  Array<{ id: string; name: string; nin_status?: string; vetted_at?: string }>
+> {
   if (!VET_FEED_URL) return [];
-  const resp = await fetch(VET_FEED_URL, { method: 'GET', mode: 'cors' });
-  if (!resp.ok) return [];
-  const data = await resp.json().catch(()=>null);
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.records)) return data.records;
-  return [];
+  try {
+    const resp = await fetch(VET_FEED_URL, { method: 'GET', mode: 'cors' });
+    if (!resp.ok) return [];
+    const data = await resp.json().catch(() => null);
+    if (data && Array.isArray(data.vetted)) return data.vetted; // from our doGet
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.records)) return data.records;
+    if (data && Array.isArray(data.applicants)) {
+      return data.applicants.map((x: any) => ({
+        id: String(x.id || x.ID || ''),
+        name: x.name || x.Name || '',
+      }));
+    }
+    return [];
+  } catch {
+    return [];
+  }
 }

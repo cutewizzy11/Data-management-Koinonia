@@ -46,7 +46,7 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
 
   const displayPerson = useMemo(() => selectedPerson || person, [selectedPerson, person]);
 
-  // ---- UPDATED: match submitted forms by applicant name only (normalized) ----
+  // --- Updated: match submissions by applicant name OR the emails listed on the applicant record ---
   useEffect(() => {
     const fetchSubmittedForms = async () => {
       if (person.role !== 'Applicant') return;
@@ -56,15 +56,31 @@ const PersonDetailsModal: React.FC<PersonDetailsModalProps> = ({
         const me = (s: string) => String(s || '').trim().toLowerCase();
         const appName = me(person.name);
 
-        const applicantReferees = allData.referees.filter(r => me(r.applicantName) === appName);
-        const applicantAssociates = allData.associates.filter(a => me(a.applicantName) === appName);
+        const candidateEmails = [
+          person.referee1Email,
+          person.referee2Email,
+          person.associate1Email,
+          person.associate2Email,
+        ]
+          .map(e => (e ? me(e) : ''))
+          .filter(Boolean);
+
+        const applicantReferees = allData.referees.filter(r => {
+          const matchesName = me(r.applicantName) === appName;
+          const matchesEmail = candidateEmails.includes(me(r.email || ''));
+          return matchesName || matchesEmail;
+        });
+
+        const applicantAssociates = allData.associates.filter(a => {
+          const matchesName = me(a.applicantName) === appName;
+          const matchesEmail = candidateEmails.includes(me(a.email || ''));
+          return matchesName || matchesEmail;
+        });
 
         setSubmittedReferees(applicantReferees);
         setSubmittedAssociates(applicantAssociates);
       } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('[PersonDetailsModal] Error fetching submitted forms:', error);
-        }
+        if (import.meta.env.DEV) console.error('[PersonDetailsModal] Error fetching submitted forms:', error);
       } finally {
         setFetchingSubmissions(false);
       }

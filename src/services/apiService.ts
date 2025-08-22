@@ -8,13 +8,16 @@ export interface ApiResponse {
 const norm = (s?: string) => String(s ?? '').trim().toLowerCase();
 
 export interface Person {
+  // Employment / new fields
   occupation?: string;
   formerEmployer?: string;
   currentEmployer?: string;
   reasonLeftFormerEmployer?: string;
 
+  // Associate-specific extra
   associateDate?: string;
 
+  // Vetting & NIN fields
   vetting_status?: 'PENDING' | 'VETTED' | 'REJECTED';
   vetted_by?: string;
   vetted_at?: string;
@@ -40,6 +43,7 @@ export interface Person {
   associates?: Person[];
   applicant?: Person;
 
+  // Extended sheet fields
   timestamp?: string;
   surname?: string;
   surnameAtBirth?: string;
@@ -71,6 +75,7 @@ export interface Person {
   associate2Email?: string;
 }
 
+// Google Apps Script feed
 const GOOGLE_APPS_SCRIPT_URL = import.meta.env.DEV
   ? '/gs-api/macros/s/AKfycbw9Nqqbd0uxeXhNV3Bt4EZppM6ib7DD1knuvPjZIQZBxsEpBQ0jQCRXZU1iAOFbbPjEsg/exec'
   : 'https://script.google.com/macros/s/AKfycbw9Nqqbd0uxeXhNV3Bt4EZppM6ib7DD1knuvPjZIQZBxsEpBQ0jQCRXZU1iAOFbbPjEsg/exec';
@@ -108,6 +113,16 @@ function getSignatureUrl(record: any): string {
   return '';
 }
 
+/** Utility: read first non-empty value from candidate keys */
+function pickFirst(obj: any, candidates: string[]): string {
+  for (const key of candidates) {
+    if (key in obj && obj[key] != null && String(obj[key]).trim() !== '') {
+      return String(obj[key]).trim();
+    }
+  }
+  return '';
+}
+
 export const fetchSheetData = async (): Promise<ApiResponse> => {
   if (USE_MOCK_DATA) {
     const { mockApplicants, mockReferees, mockAssociates } = await import('../data/mockData');
@@ -122,29 +137,63 @@ function mapApplicant(applicant: any, idx: number): Person {
   const photoUrl = getApplicantPhotoUrl(applicant);
   const signatureUrl = getSignatureUrl(applicant);
 
-  const firstName  = applicant['\nFirst Name'] || applicant['First Name'] || applicant.firstname || '';
-  const surname    = applicant['Surname'] || applicant.surname || '';
-  const otherNames = applicant['\nOther Names'] || applicant['Other Names'] || applicant.othernames || '';
+  // Names
+  const firstName  = pickFirst(applicant, ['\nFirst Name','First Name','firstname']);
+  const surname    = pickFirst(applicant, ['Surname','surname']);
+  const otherNames = pickFirst(applicant, ['\nOther Names','Other Names','othernames']);
   const name = [firstName, otherNames, surname].filter(Boolean).join(' ').trim();
 
-  const occupation      = applicant['Occupation'] || applicant.occupation || '';
-  const formerEmployer  = applicant['Former employer'] || applicant['Former Employer'] || applicant.formerEmployer || '';
-  const currentEmployer = applicant['Current employer'] || applicant['Current Employer'] || applicant.currentEmployer || '';
-  const reasonLeftFormerEmployer =
-    applicant['Reason why you left your former employer'] ||
-    applicant['Reason for leaving former employer'] ||
-    applicant.reasonForLeavingFormerEmployer || applicant.reasonLeftFormerEmployer || '';
+  // Employment (wide header coverage)
+  const occupation = pickFirst(applicant, [
+    'Occupation',
+    'What is your occupation?',
+    'Your Occupation',
+    'Current Occupation',
+    'Occupation (Optional)',
+    'occupation',
+  ]);
 
-  const nin  = applicant['\nNational Identification Number (NIN)'] || applicant['National Identification Number (NIN)'] || applicant.nin || '';
-  const vnin = applicant['VNIN'] || applicant.vnin || '';
+  const formerEmployer = pickFirst(applicant, [
+    'Former employer',
+    'Former Employer',
+    'Previous Employer',
+    'Previous employer',
+    'formerEmployer',
+  ]);
+
+  const currentEmployer = pickFirst(applicant, [
+    'Current employer',
+    'Current Employer',
+    'Present Employer',
+    'presentEmployer',
+    'currentEmployer',
+  ]);
+
+  const reasonLeftFormerEmployer = pickFirst(applicant, [
+    'Reason why you left your former employer',
+    'Reason for leaving former employer',
+    'Reason Left Former Employer',
+    'Why did you leave your former employer?',
+    'reasonForLeavingFormerEmployer',
+    'reasonLeftFormerEmployer',
+  ]);
+
+  // NIN / VNIN
+  const nin = pickFirst(applicant, [
+    '\nNational Identification Number (NIN)',
+    'National Identification Number (NIN)',
+    'NIN',
+    'nin',
+  ]);
+  const vnin = pickFirst(applicant, ['VNIN', 'vnin']);
 
   return {
     id: applicant.id || `person-${idx + 1}`,
     name: name || applicant.name || `Applicant ${idx + 1}`,
-    email: applicant['Email Address'] || applicant.email || '',
-    phone: applicant['\nPhone Numbers'] || applicant.phone || '',
+    email: pickFirst(applicant, ['Email Address','email','Email']),
+    phone: pickFirst(applicant, ['\nPhone Numbers','Phone Numbers','phone','Phone']),
     role: 'Applicant',
-    location: applicant['\nResidential Address'] || applicant.location || '',
+    location: pickFirst(applicant, ['\nResidential Address','Residential Address','location','Location']),
     image: convertGoogleDriveUrlToLocal(photoUrl),
     signature: convertGoogleDriveUrlToLocal(signatureUrl),
 
@@ -152,21 +201,21 @@ function mapApplicant(applicant: any, idx: number): Person {
     surname,
     firstName,
     otherNames,
-    stateOfOrigin: applicant['\nState of Origin'] || '',
-    localGovernmentArea: applicant['\nLocal Government Area'] || '',
-    dateOfBirth: applicant['\nDate of Birth'] || '',
-    placeOfBirth: applicant['\nPlace of Birth'] || '',
-    maritalStatus: applicant['\nMarital Status'] || '',
+    stateOfOrigin: pickFirst(applicant, ['\nState of Origin','State of Origin']),
+    localGovernmentArea: pickFirst(applicant, ['\nLocal Government Area','Local Government Area']),
+    dateOfBirth: pickFirst(applicant, ['\nDate of Birth','Date of Birth']),
+    placeOfBirth: pickFirst(applicant, ['\nPlace of Birth','Place of Birth']),
+    maritalStatus: pickFirst(applicant, ['\nMarital Status','Marital Status']),
     nationalIdentificationNumber: nin,
-    nationality: applicant['  Nationality  '] || applicant.nationality || '',
-    residentialAddress: applicant['\nResidential Address'] || '',
-    phoneNumbers: applicant['\nPhone Numbers'] || '',
-    socialMediaHandles: applicant['\nSocial Media Handles (Facebook, X, Instagram, Tiktok)'] || '',
-    nickNameOrAlias: applicant['\nNick Name or Elias'] || '',
-    nextOfKin: applicant['\nNext of Kin (NOK)'] || '',
-    localAssembly: applicant['Local Assembly?'] || '',
-    koinoniaFollowingDuration: applicant['How long have you been actively following Koinonia?'] || '',
-    criminalRecord: applicant['Do you have any Criminal Record?'] || '',
+    nationality: pickFirst(applicant, ['  Nationality  ','Nationality','nationality']),
+    residentialAddress: pickFirst(applicant, ['\nResidential Address','Residential Address']),
+    phoneNumbers: pickFirst(applicant, ['\nPhone Numbers','Phone Numbers']),
+    socialMediaHandles: pickFirst(applicant, ['\nSocial Media Handles (Facebook, X, Instagram, Tiktok)','Social Media','Social Media Handles']),
+    nickNameOrAlias: pickFirst(applicant, ['\nNick Name or Elias','Nick Name or Elias','Nickname or Alias']),
+    nextOfKin: pickFirst(applicant, ['\nNext of Kin (NOK)','Next of Kin (NOK)','Next of Kin']),
+    localAssembly: pickFirst(applicant, ['Local Assembly?','Local Assembly']),
+    koinoniaFollowingDuration: pickFirst(applicant, ['How long have you been actively following Koinonia?','Following Koinonia Duration']),
+    criminalRecord: pickFirst(applicant, ['Do you have any Criminal Record?','Criminal Record']),
 
     referee1Name: applicant['Referee 1 Name '] || '',
     referee1Email: applicant['Referee 1 Email '] || '',
@@ -177,6 +226,7 @@ function mapApplicant(applicant: any, idx: number): Person {
     associate2Name: applicant['Associate 2 Name '] || '',
     associate2Email: applicant['Associate 2 Email '] || '',
 
+    // New fields
     occupation,
     formerEmployer,
     currentEmployer,
@@ -223,7 +273,7 @@ export const processSheetData = (apiData: ApiResponse) => {
   const referees   = (apiData.referees   || []).map(mapReferee);
   const associates = (apiData.associates || []).map(mapAssociate);
 
-  // Link by normalized applicantName
+  // Link by (lowercased, trimmed) name to be resilient to case/spacing
   const byName = new Map<string, Person>();
   for (const a of applicants) byName.set(norm(a.name), a);
 
@@ -269,7 +319,24 @@ export const findRefereeByEmail = async (email: string) => {
   const d = await getAllData();
   return d.referees.find(r => norm(r.email) === norm(email)) || null;
 };
+
 export const findAssociateByEmail = async (email: string) => {
   const d = await getAllData();
   return d.associates.find(a => norm(a.email) === norm(email)) || null;
+};
+
+/**
+ * ✅ Re-introduced for DetailView
+ * Fetch applicant’s current referees/associates from the processed data.
+ */
+export const fetchApplicantDetails = async (
+  applicantName: string
+): Promise<{ referees: Person[]; associates: Person[] }> => {
+  const data = await getAllData();
+  const app = data.applicants.find(a => norm(a.name) === norm(applicantName));
+  if (!app) return { referees: [], associates: [] };
+  return {
+    referees: app.referees || [],
+    associates: app.associates || [],
+  };
 };
